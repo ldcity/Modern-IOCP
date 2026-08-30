@@ -1,0 +1,73 @@
+name: modern-iocp CI
+
+on:
+  push:
+    paths:
+      - 'modern-iocp/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    paths:
+      - 'modern-iocp/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: pwsh
+    working-directory: modern-iocp
+
+jobs:
+  build-and-verify:
+    runs-on: windows-2025
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 로컬과 같은 vcpkg 커밋을 쓴다. 러너에 미리 깔린 vcpkg 는 버전이 다를 수 있고,
+      # 그러면 vcpkg.json 의 builtin-baseline 커밋을 찾지 못한다.
+      - name: vcpkg 체크아웃 (vcpkg.json 의 baseline 커밋)
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          ref: 114d9fe62faf35856b45cf55cb93b57028a45d63
+          path: vcpkg
+
+      - name: vcpkg 부트스트랩
+        working-directory: vcpkg
+        run: .\bootstrap-vcpkg.bat -disableMetrics
+
+      - name: VCPKG_ROOT 설정
+        run: echo "VCPKG_ROOT=${{ github.workspace }}\vcpkg" >> $env:GITHUB_ENV
+
+      # 러너의 toolset 이 로컬(v145)과 다르다. 어긋난 원인을 나중에 추적할 수 있도록 남긴다.
+      - name: 툴체인 기록
+        run: |
+          cmake --version
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          & $vswhere -latest -products * -property displayName
+          & $vswhere -latest -products * -property installationVersion
+          $toolsetFile = & $vswhere -latest -products * -property installationPath
+          Get-Content "$toolsetFile\VC\Auxiliary\Build\Microsoft.VCToolsVersion.default.txt"
+
+      - name: 빌드
+        run: .\scripts\phase1.ps1 build -Preset x64-release-ci
+
+      - name: 테스트
+        run: .\scripts\phase1.ps1 test -Preset x64-release-ci
+
+      # green 만으로는 크래시 경로가 살아 있다는 증거가 되지 않는다.
+      # 덤프가 실제로 생기고 짝 PDB 가 있는지를 exit code 로 판정한다.
+      - name: 덤프 배관 검증
+        run: .\scripts\phase1.ps1 verify-dump -Preset x64-release-ci
+
+      # 덤프는 짝이 되는 PDB 가 있어야 심볼이 붙는다. 둘을 함께 보관한다.
+      - name: 덤프와 심볼 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-dump-and-symbols
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            modern-iocp/build/x64-release-ci/Release/dumps/*.dmp
+            modern-iocp/build/x64-release-ci/Release/*.pdb
