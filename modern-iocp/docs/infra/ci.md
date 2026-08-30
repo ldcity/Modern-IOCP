@@ -7,9 +7,10 @@
 
 ## 상태
 
-**첫 실행 green** — run #1 (`672182e`, 2026-08-30):
-[actions/runs/33319684014](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014).
+**green** — 고정된 preset 으로 도는 run #2 (`2f430c0`, 2026-08-31):
+[actions/runs/33321582508](https://github.com/ldcity/Modern-IOCP/actions/runs/33321582508).
 빌드·테스트·`verify-dump`·artifact 업로드까지 전 스텝 성공했다.
+(고정 전 run #1 은 [33319684014](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014).)
 
 ## 무엇을 하는가
 
@@ -44,13 +45,14 @@
 러너가 실제로 무엇으로 빌드했는지를 매 실행 로그에 남긴다 — VS displayName·installationVersion,
 `Microsoft.VCToolsVersion.default.txt`, 설치된 Windows SDK 목록.
 
-첫 실행(2026-08-30)의 값은 이랬다.
+실측값(SDK 행은 목록 출력을 추가한 run #2 부터):
 
 | 항목 | `windows-2025` 러너 | 로컬 |
 |---|---|---|
 | Visual Studio | Enterprise 2026 / 18.9.12112.369 | Community 2026 |
 | MSVC toolset | 14.51.36231 | 14.51.36231 |
 | CMake | 4.4.2 | 4.3.3 |
+| 설치된 Windows SDK | 10.0.26100.0 | 10.0.26100.0 |
 
 **toolset 이 로컬과 같은 값이었다.** 러너에 VS 2026 이 없을 것이라는 전제가 틀렸으므로,
 CI preset 은 고정을 포기하지 않고 `x64-release` 를 상속하는 쪽으로 바꿨다.
@@ -92,8 +94,9 @@ on:
       - '.github/workflows/ci.yml'
 ```
 
-문서만 고쳤을 때 빌드를 돌리지 않는다. 이 저장소에는 `seamless-world/` 도 있는데
-그쪽은 아직 코드가 없다.
+`modern-iocp/` 밖(`.ai/`·`seamless-world/`·루트 문서)만 고쳤을 때 빌드를 돌리지 않는다.
+`modern-iocp/docs/**` 만 고쳐도 빌드는 돈다 — 필터를 더 잘게 자르면 "코드인데 안 돌았다"가
+생길 수 있고, 한 번이 2분이라 그대로 둔다.
 
 ## 바꾸려면
 

@@ -23,7 +23,7 @@ Windows IOCP 게임 서버를 **재현 가능하고 검증 가능한 형태로**
 | 빌드 (x64 Release, `/W4 /WX`) | 통과 |
 | `smoke.echo_roundtrip` | 통과 |
 | 덤프 생성 + 짝 PDB 확인 | 통과 |
-| GitHub Actions (`windows-2025`) | 통과 — [run #1](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014) |
+| GitHub Actions (`windows-2025`) | 통과 — [run #2](https://github.com/ldcity/Modern-IOCP/actions/runs/33321582508) |
 
 아직 없는 것: 다중 세션, IO 참조 카운트, 부분 송신 처리, 부하 측정, DB/Redis 연동.
 

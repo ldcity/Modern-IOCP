@@ -5,7 +5,8 @@
 | Task | Status | Implementer | Reviewer | Owned paths |
 |---|---|---|---|---|
 | [TASK-20260829-modern-iocp-phase1](TASK-20260829-modern-iocp-phase1.md) | **Phase 정의** (실행 task 아님) | — | Codex | `.ai/tasks/TASK-20260829-modern-iocp-phase1.md` |
-| [TASK-20260829-modern-iocp-s1-skeleton](TASK-20260829-modern-iocp-s1-skeleton.md) | Draft — 사용자 승인 대기 | **사용자** (코드) + Claude (인프라) | Codex | `modern-iocp/**`, `.ai/tasks/TASK-20260829-modern-iocp-s1-skeleton.md` |
+
+활성 실행 task 없음 — 다음은 S2(세션 수명)다.
 
 ## Rules
 
@@ -55,4 +56,6 @@
 
 ## Completed
 
-아직 없음.
+| Task | 완료 | 결과 |
+|---|---|---|
+| [TASK-20260829-modern-iocp-s1-skeleton](TASK-20260829-modern-iocp-s1-skeleton.md) | 2026-08-31 | S1 골격 + 덤프 배관. Codex 리뷰 3회(1회차 사전 · 코드 · 툴체인 고정) 반영. CI run #2 green `2f430c0` |

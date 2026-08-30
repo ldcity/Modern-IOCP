@@ -1,7 +1,7 @@
 # TASK-20260829-modern-iocp-s1-skeleton: S1 — 골격 + 덤프 plumbing
 
-- Status: Review requested — CI 첫 실행 green(run #1, 고정 전 preset). **고정 diff 는 로컬 검증만
-  했고 CI 재확인(run #2)이 남았다.** 그 전까지 완료로 쓰지 않는다
+- Status: **Done** (2026-08-31) — Acceptance criteria 전부 충족. 고정된 preset 으로 도는
+  CI run #2 green (`2f430c0`)
 - Implementer: **사용자** (코드) + Claude (빌드·CI·스크립트 인프라). 아래 "작성자 분담" 참조
 - Reviewer: Codex
 - Repositories: `D:\GameProjects\Portfolio`
@@ -192,9 +192,10 @@ Phase 1 역할 경계표를 이 단계에 적용한 결과다. 경계를 옮기�
   격리 재현 후 `architecture` 의 `version=10.0.26100.0` 로 옮기고 무의미한 캐시 변수를 지웠다.
   toolset patch 는 애초에 강제할 수단이 없어(실측) 문서 주장을 실제 강도로 낮췄다.
   상세는 아래 "Review resolution 2".
-- 2026-08-31 **경계 예외 3건째** (사용자 요청) — `README.md` "요구 환경" 절의 CI toolset 문단을
-  Claude 가 고쳤다. 위 preset 변경으로 그 두 줄이 사실과 달라졌고, 내용이 CI 인프라라
-  같은 diff 로 묶어 리뷰에 올리는 편이 낫다고 판단했다. README 의 나머지는 사용자 소유 그대로다
+- 2026-08-31 **경계 예외 3건째** (사용자 요청) — `README.md` 두 곳을 Claude 가 고쳤다:
+  "요구 환경" 절의 CI toolset 문단(preset 변경으로 사실과 달라짐)과 상태표의 GitHub Actions 행
+  (`미검증` → run #2 링크). 둘 다 내용이 CI 인프라라 같은 diff 로 묶었다.
+  README 의 나머지는 사용자 소유 그대로다
 
 ## Verification
 
@@ -208,7 +209,8 @@ Phase 1 역할 경계표를 이 단계에 적용한 결과다. 경계를 옮기�
 | toolset patch 고정이 강제되는가 | **아니오** | `-T v145,version=14.51.99999` 로 configure·빌드 모두 exit 0. `14.51` 계열까지만 보장된다 — 문서에 그대로 적었다 |
 | 덤프 수동 열기 (WinDbg/VS) | 통과 | `docs/dump-analysis-00-plumbing.md` — `.symfix` → `.sympath+` → `.ecxr` → `k`, 스크린샷 4장. 🔴 `k` 출력 텍스트 자체는 문서에 넣지 않았다 |
 | VS 2026 빌드·중단점 | 통과 | `docs/vs-build.md` — `x64-release` preset |
-| CI (`verify-dump` 실행 + artifact) | 통과 (run #1) | `672182e` / 2026-08-30 — [runs/33319684014](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014) 전 스텝 성공. **toolset 고정 후 run #2 재확인 필요** |
+| CI (`verify-dump` 실행 + artifact) | 통과 | run #1 `672182e` [runs/33319684014](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014) (고정 전) · **run #2 `2f430c0` [runs/33321582508](https://github.com/ldcity/Modern-IOCP/actions/runs/33321582508) (고정 후)** — 둘 다 빌드·테스트·`verify-dump`·artifact 업로드 전 스텝 성공 |
+| 고정이 러너에서 실제로 물리는가 | 통과 | run #2 "툴체인 기록" — VS Enterprise 2026 / 18.9.12112.369 · MSVC 14.51.36231 · 설치 SDK `10.0.26100.0`. preset 이 요구하는 조합이 러너에 있고 그것으로 빌드됐다 |
 
 ## Handoff to reviewer
 
@@ -220,8 +222,8 @@ Phase 1 역할 경계표를 이 단계에 적용한 결과다. 경계를 옮기�
 - Known risks: echo 서버 범위 팽창. S2 설계 선취
 - Review focus: S1 완료 조건이 S2 를 침범하지 않는가. 종료 경로를 S1 에 넣은 판단이 맞는가.
   도구 버전 고정이 재현성을 실제로 보장하는가
-- Checks not run: 고정한 preset 으로 도는 **CI run #2**. 로컬에서 같은 preset 으로 build·test·
-  verify-dump 가 통과하는 것까지만 확인했다
+- Checks not run: 없음. 마지막에 고친 `build-system.md` "바꾸려면" 한 줄(재리뷰 P2)만
+  재리뷰를 거치지 않았다 — 문서 한 줄이고 빌드에 영향이 없다
 
 ## Review resolution
 
@@ -271,4 +273,4 @@ Phase 1 역할 경계표를 이 단계에 적용한 결과다. 경계를 옮기�
 (`_WIN32_WINNT`/`WINVER`/`NTDDI` 의존이 저장소에 없다), preset 의 `architecture` 가
 `-A` 와 같은 경로로 전달되고 `x64-release-ci` 도 상속으로 같은 보장을 받는다.
 
-남은 위험은 하나 — **고정된 preset 으로 도는 CI run #2 미실행.** 문서에 그대로 적혀 있다.
+그 위험(고정된 preset 의 CI 미검증)은 2026-08-31 run #2 green 으로 해소됐다 — 위 Verification 표.
