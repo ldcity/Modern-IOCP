@@ -7,9 +7,9 @@
 
 ## 상태
 
-**미검증.** 원격 저장소가 없어 아직 한 번도 실행되지 않았다. 로컬에서 CI 가 실행할 명령
-3개를 CI preset 으로 돌려 통과하는 것만 확인했다. 원격에 push 하고 green 을 봐야
-S1 완료 조건이 충족된다.
+**첫 실행 green** — run #1 (`672182e`, 2026-08-30):
+[actions/runs/33319684014](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014).
+빌드·테스트·`verify-dump`·artifact 업로드까지 전 스텝 성공했다.
 
 ## 무엇을 하는가
 
@@ -41,21 +41,25 @@ S1 완료 조건이 충족된다.
 
 ## 툴체인 기록 단계
 
-로컬은 VS 2026 / toolset v145 로 고정돼 있지만 러너에는 그 버전이 없을 가능성이 높다.
-그래서 CI preset 은 제너레이터·toolset·SDK 를 고정하지 않는다.
+러너가 실제로 무엇으로 빌드했는지를 매 실행 로그에 남긴다 — VS displayName·installationVersion,
+`Microsoft.VCToolsVersion.default.txt`, 설치된 Windows SDK 목록.
 
-대신 러너의 실제 버전을 로그에 남긴다.
+첫 실행(2026-08-30)의 값은 이랬다.
 
-```yaml
-- name: 툴체인 기록
-  run: |
-    cmake --version
-    & $vswhere -latest -products * -property displayName
-    Get-Content "...\Microsoft.VCToolsVersion.default.txt"
-```
+| 항목 | `windows-2025` 러너 | 로컬 |
+|---|---|---|
+| Visual Studio | Enterprise 2026 / 18.9.12112.369 | Community 2026 |
+| MSVC toolset | 14.51.36231 | 14.51.36231 |
+| CMake | 4.4.2 | 4.3.3 |
 
-**첫 실행 로그를 보고 CI preset 에도 고정하는 것이 다음 단계다.** 지금 추측으로 박으면
-틀렸을 때 원인을 찾기 어렵다.
+**toolset 이 로컬과 같은 값이었다.** 러너에 VS 2026 이 없을 것이라는 전제가 틀렸으므로,
+CI preset 은 고정을 포기하지 않고 `x64-release` 를 상속하는 쪽으로 바꿨다.
+무엇이 어느 강도로 고정되는지는 `docs/infra/build-system.md` 에 있다 — 여기서 반복하지 않는다.
+
+CMake 버전은 고정하지 않는다 — `CMakeLists.txt` 의 최소 버전만 만족하면 된다.
+
+이 단계는 preset 고정 이후에도 남긴다. 러너 이미지가 바뀌어 configure 가 실패할 때
+**무엇이 사라졌는지**를 이 로그에서만 알 수 있다.
 
 ## `verify-dump` 를 CI 에서 실제로 돌리는 이유
 

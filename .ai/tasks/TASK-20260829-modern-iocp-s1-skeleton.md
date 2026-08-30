@@ -1,6 +1,7 @@
 # TASK-20260829-modern-iocp-s1-skeleton: S1 — 골격 + 덤프 plumbing
 
-- Status: Draft — 사용자 승인 대기
+- Status: Review requested — CI 첫 실행 green(run #1, 고정 전 preset). **고정 diff 는 로컬 검증만
+  했고 CI 재확인(run #2)이 남았다.** 그 전까지 완료로 쓰지 않는다
 - Implementer: **사용자** (코드) + Claude (빌드·CI·스크립트 인프라). 아래 "작성자 분담" 참조
 - Reviewer: Codex
 - Repositories: `D:\GameProjects\Portfolio`
@@ -178,28 +179,49 @@ Phase 1 역할 경계표를 이 단계에 적용한 결과다. 경계를 옮기�
     함정 3건 발견)는 사용자가 했고 Claude 는 기록만 정리했다
   - 환경·명명 변경: VS 2026 / toolset v145 확정, 프로젝트명 `Core`/`GameServer`/`Tests`,
     디렉터리를 프로젝트별로 분리, 접근자 `get`/`set` 관례 확정
+- 2026-08-31 로컬 검증 전부 통과 → 공개 전 민감 내용 정리 후 히스토리 재작성 → 첫 push (`672182e`)
+- 2026-08-31 **CI 첫 실행 green.** 러너(`windows-2025`) 실측값이 이 문서의 전제를 뒤집었다 —
+  Visual Studio **Enterprise 2026 / 18.9.12112.369**, MSVC **14.51.36231**(로컬과 같은 값),
+  CMake 4.4.2. "러너에 VS 2026 이 없을 것" 이라는 전제로 CI preset 이 포기했던 toolset·SDK 고정을
+  되살렸다 — `x64-release-ci` 를 `"inherits": "x64-release"` 로 바꾸고 `binaryDir` 만 덮어쓴다.
+  워크플로 "툴체인 기록" 단계에 설치된 Windows SDK 목록 출력을 추가했다.
+  변경 파일: `modern-iocp/CMakePresets.json` · `.github/workflows/ci.yml` ·
+  `modern-iocp/docs/infra/{build-system,ci}.md`
+- 2026-08-31 **Codex 리뷰 3회차 반영** (`Request changes`, P1 1건 · P2 2건).
+  P1 이 실제 결함이었다 — `CMAKE_SYSTEM_VERSION` 은 SDK 를 고정하지 않는다(`CMP0149` 새 동작).
+  격리 재현 후 `architecture` 의 `version=10.0.26100.0` 로 옮기고 무의미한 캐시 변수를 지웠다.
+  toolset patch 는 애초에 강제할 수단이 없어(실측) 문서 주장을 실제 강도로 낮췄다.
+  상세는 아래 "Review resolution 2".
+- 2026-08-31 **경계 예외 3건째** (사용자 요청) — `README.md` "요구 환경" 절의 CI toolset 문단을
+  Claude 가 고쳤다. 위 preset 변경으로 그 두 줄이 사실과 달라졌고, 내용이 CI 인프라라
+  같은 diff 로 묶어 리뷰에 올리는 편이 낫다고 판단했다. README 의 나머지는 사용자 소유 그대로다
 
 ## Verification
 
 | Command or check | Result | Evidence/notes |
 |---|---|---|
-| `scripts\phase1.ps1 doctor` | 미실행 | |
-| `scripts\phase1.ps1 build` | 미실행 | |
-| `scripts\phase1.ps1 test` | 미실행 | |
-| `scripts\phase1.ps1 verify-dump` | 미실행 | |
-| 덤프 수동 열기 (WinDbg/VS) | 미실행 | |
-| VS 2026 빌드·중단점 | 미실행 | |
-| CI (`verify-dump` 실행 + artifact) | 미실행 | 워크플로 없음 |
+| `scripts\phase1.ps1 doctor` | 통과 | 2026-08-31 exit 0 — cmake 4.3.3 / VS 18 Community / toolset 14.51.36231 / SDK 10.0.26100.0 / vcpkg baseline 일치. `VCPKG_ROOT` 가 없는 셸에서는 exit 1 + 무엇이 없는지 명시하는 것까지 확인 |
+| `scripts\phase1.ps1 build` | 통과 | 2026-08-31 exit 0 · 경고 0. **SDK 고정 수정 후 두 preset 다 build 디렉터리를 지우고 재구성** — `Selecting Windows SDK version 10.0.26100.0`, 컴파일러 `MSVC/14.51.36231/bin/Hostx64/x64/cl.exe` |
+| `scripts\phase1.ps1 test` | 통과 | `smoke.echo_roundtrip` Passed 0.02s — 두 preset 모두 |
+| `scripts\phase1.ps1 verify-dump` | 통과 | exit 0 — 덤프 생성 + 짝 PDB 확인, 두 preset 모두. PDB 를 지우면 exit 1 하는 것도 확인 |
+| SDK 고정이 실제로 강제되는가 | 통과 | 빈 프로젝트 격리 실측 — `-A "x64,version=10.0.99999.0"` → `CMake Error` exit 1 / `-DCMAKE_SYSTEM_VERSION=10.0.99999.0` → 조용히 26100 선택 exit 0 (그래서 고정 위치를 옮겼다) |
+| toolset patch 고정이 강제되는가 | **아니오** | `-T v145,version=14.51.99999` 로 configure·빌드 모두 exit 0. `14.51` 계열까지만 보장된다 — 문서에 그대로 적었다 |
+| 덤프 수동 열기 (WinDbg/VS) | 통과 | `docs/dump-analysis-00-plumbing.md` — `.symfix` → `.sympath+` → `.ecxr` → `k`, 스크린샷 4장. 🔴 `k` 출력 텍스트 자체는 문서에 넣지 않았다 |
+| VS 2026 빌드·중단점 | 통과 | `docs/vs-build.md` — `x64-release` preset |
+| CI (`verify-dump` 실행 + artifact) | 통과 (run #1) | `672182e` / 2026-08-30 — [runs/33319684014](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014) 전 스텝 성공. **toolset 고정 후 run #2 재확인 필요** |
 
 ## Handoff to reviewer
 
-- Changed files: 아직 없음
+- Changed files: S1 본체는 커밋 `672182e` 에 있다. 이번 리뷰 대상은 그 위의 미커밋 diff —
+  `modern-iocp/CMakePresets.json` · `.github/workflows/ci.yml` ·
+  `modern-iocp/docs/infra/{build-system,ci}.md` · `modern-iocp/README.md`(경계 예외) · 이 문서
 - Key decisions: 덤프 plumbing 을 S1 로 당김 / echo 서버를 의도적으로 얇게 유지 /
   로드맵 대신 `README.md` 뼈대를 S1 에서 만들고 단계마다 갱신 / 도구 버전을 처음부터 고정
 - Known risks: echo 서버 범위 팽창. S2 설계 선취
 - Review focus: S1 완료 조건이 S2 를 침범하지 않는가. 종료 경로를 S1 에 넣은 판단이 맞는가.
   도구 버전 고정이 재현성을 실제로 보장하는가
-- Checks not run: 전부
+- Checks not run: 고정한 preset 으로 도는 **CI run #2**. 로컬에서 같은 preset 으로 build·test·
+  verify-dump 가 통과하는 것까지만 확인했다
 
 ## Review resolution
 
@@ -220,3 +242,33 @@ Phase 1 역할 경계표를 이 단계에 적용한 결과다. 경계를 옮기�
 - A-8 Baseline 오기 → 공개 히스토리의 새 루트 `main ec16031` 로 수정, 변동성 있는 개수 표기 제거
 
 재리뷰 필요. 다만 S1 코드가 나온 뒤 함께 판정하는 편이 낫다.
+
+## Review resolution 2 — CI toolset 고정 diff
+
+`.ai/reviews/TASK-20260829-modern-iocp-s1-ci-toolset-codex.md` (2026-08-31, `Request changes`)
+
+| 발견 | 상태 | 해소 방식 |
+|---|---|---|
+| **P1** `CMAKE_SYSTEM_VERSION` 은 SDK 를 고정하지 못한다 (`CMP0149` 새 동작) | 해소 | 격리 프로젝트로 재현 확인 후 `architecture` 를 `x64,version=10.0.26100.0` 으로 바꾸고 `CMAKE_SYSTEM_VERSION` 삭제. 실측표를 `docs/infra/build-system.md` 에 남겼다 |
+| **P2** toolset 은 `14.51` 계열까지만 고정되는데 문서는 patch 동일성을 주장 | 해소 | patch 고정에는 **강제력이 없다**(실측: `version=14.51.99999` 로 configure·빌드 모두 exit 0). 그래서 exact 고정 대신 문서 주장을 실제 강도로 낮췄다 — README·build-system 둘 다 |
+| **P2** 완료 상태와 CI 검증 상태를 문서가 다르게 말함 | 해소 | Status 를 "고정 diff 는 로컬 검증만, CI run #2 남음"으로 낮추고 README 상태표의 "GitHub Actions 미검증"을 run #1 링크로 갱신 |
+| (리뷰어 제안) 선택된 SDK 를 CI 로그에 남길 것 | 미채택 | SDK 는 이제 없으면 configure 가 실패하므로 **silent fallback 경로 자체가 없다** — 로그로 메울 correctness 공백이 아니다. (재리뷰 지적: configure 출력의 `cl.exe` 경로는 toolset 증거이지 SDK 증거가 아니다. 맞는 지적이라 근거에서 뺐다.) 관측성 강화는 필요해지면 그때 넣는다 |
+
+리뷰어가 확인한 것 중 유지된 판단: `inherits` 로 로컬/CI 를 묶은 것(부작용 없음),
+`binaryDir` 만 덮어쓰는 것, 워크플로의 SDK 목록 출력.
+
+### 재리뷰 (2회차)
+
+`.ai/reviews/TASK-20260829-modern-iocp-s1-ci-toolset-codex-r2.md` (2026-08-31, `Request changes`,
+**차단 없음**). 1회차 발견 3건 전부 `해소` 판정.
+
+| 발견 | 상태 | 해소 방식 |
+|---|---|---|
+| **P2** `build-system.md` "바꾸려면" 절이 아직 `CMAKE_SYSTEM_VERSION` 을 가리킨다 | 해소 | `architecture` 의 `version=` 으로 고치고 되돌리지 말라는 경고를 붙였다. 다음 SDK 변경 때 같은 결함이 재도입되는 경로였다 |
+| (지적) 미채택 사유의 근거 하나가 부정확 | 해소 | `cl.exe` 경로는 toolset 증거이지 SDK 증거가 아니다. 위 표에서 그 근거를 뺐다 |
+
+리뷰어가 독립 확인한 것: `CMAKE_SYSTEM_VERSION` 삭제 부작용 없음
+(`_WIN32_WINNT`/`WINVER`/`NTDDI` 의존이 저장소에 없다), preset 의 `architecture` 가
+`-A` 와 같은 경로로 전달되고 `x64-release-ci` 도 상속으로 같은 보장을 받는다.
+
+남은 위험은 하나 — **고정된 preset 으로 도는 CI run #2 미실행.** 문서에 그대로 적혀 있다.

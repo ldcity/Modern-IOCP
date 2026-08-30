@@ -23,7 +23,7 @@ Windows IOCP 게임 서버를 **재현 가능하고 검증 가능한 형태로**
 | 빌드 (x64 Release, `/W4 /WX`) | 통과 |
 | `smoke.echo_roundtrip` | 통과 |
 | 덤프 생성 + 짝 PDB 확인 | 통과 |
-| GitHub Actions | **미검증** — 원격 저장소 미연결 |
+| GitHub Actions (`windows-2025`) | 통과 — [run #1](https://github.com/ldcity/Modern-IOCP/actions/runs/33319684014) |
 
 아직 없는 것: 다중 세션, IO 참조 카운트, 부분 송신 처리, 부하 측정, DB/Redis 연동.
 
@@ -41,15 +41,17 @@ Windows IOCP 게임 서버를 **재현 가능하고 검증 가능한 형태로**
 
 | 항목 | 버전 | 고정 위치 |
 |---|---|---|
-| Visual Studio | 2026 (toolset v145 / 14.51) | `CMakePresets.json` |
+| Visual Studio | 2026 (toolset v145 / 14.51 계열) | `CMakePresets.json` |
 | Windows SDK | 10.0.26100.0 | `CMakePresets.json` |
 | CMake | 3.28 이상 | `CMakeLists.txt` |
 | vcpkg | baseline `114d9fe6` | `vcpkg.json` |
 
 vcpkg 를 clone·bootstrap 한 뒤 그 경로를 `VCPKG_ROOT` 환경변수로 설정한다.
 
-🔴 **CI 는 다른 toolset 을 쓴다.** GitHub Actions 러너에 VS 2026 이 없으므로
-`x64-release-ci` preset 은 toolset·SDK 를 고정하지 않는다. 의존성(vcpkg baseline)은 동일하다.
+**CI 도 같은 것을 쓴다.** `x64-release-ci` preset 은 위 표를 그대로 상속하고 build 디렉터리만
+분리한다 — GitHub Actions `windows-2025` 러너도 VS 2026 / MSVC 14.51 이다.
+VS·SDK 가 없으면 configure 가 즉시 실패한다. 다만 **toolset 은 `14.51` 계열까지만 강제된다**
+(patch 는 아니다) — 근거와 실측은 [`docs/infra/build-system.md`](docs/infra/build-system.md).
 
 ## 구조
 

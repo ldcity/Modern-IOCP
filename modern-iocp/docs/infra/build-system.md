@@ -48,20 +48,57 @@ vcpkg 는 C++ 패키지 매니저다. 레거시가 라이브러리 소스와 `.l
 
 preset 은 둘이다.
 
-| | `x64-release` (로컬) | `x64-release-ci` |
-|---|---|---|
-| 제너레이터 | `Visual Studio 18 2026` | 고정 안 함 |
-| toolset | `v145, version=14.51` | 고정 안 함 |
-| Windows SDK | `10.0.26100.0` | 고정 안 함 |
-| vcpkg baseline | `114d9fe...` | 동일 |
-| triplet | `x64-windows-static-md` | 동일 |
+| | `x64-release` (로컬) | `x64-release-ci` | 어긋나면 |
+|---|---|---|---|
+| 제너레이터 | `Visual Studio 18 2026` | 상속 | configure 실패 |
+| toolset | `v145, version=14.51` | 상속 | **14.51 계열 안에서는 조용히 다름** (아래) |
+| Windows SDK | `architecture` 의 `version=10.0.26100.0` | 상속 | configure 실패 |
+| vcpkg baseline | `114d9fe...` | 동일 | 의존성 버전 다름 |
+| triplet | `x64-windows-static-md` | 동일 | 링크 방식 다름 |
+| build 디렉터리 | `build/x64-release` | `build/x64-release-ci` | — |
 
-🔴 **CI preset 이 toolset 을 고정하지 않는 이유**: GitHub Actions 러너에 VS 2026 이 없을
-가능성이 높다. 로컬 preset 을 그대로 쓰면 CI 가 시작조차 못 한다. **의존성은 같고 toolset 만
-다르다** — 재현성을 일부 포기한 것이므로 README 에 그 차이를 적는다.
+CI preset 은 `"inherits": "x64-release"` 로 로컬 preset 을 그대로 받고 `binaryDir` 만 덮어쓴다.
+**둘이 같아야 한다는 것이 규칙이므로 값을 복사하지 않고 상속으로 묶는다** — 복사하면 한쪽만
+바뀌어도 아무도 모른다. build 디렉터리를 나누는 이유는 CI 설정이 로컬 캐시를 덮지 않게 하려는
+것뿐이다.
 
-CI 워크플로에 "툴체인 기록" 단계를 넣어 러너의 VS·toolset 을 로그에 남긴다.
-그 값을 확인한 뒤 CI preset 에도 고정하는 것이 다음 단계다.
+처음에는 CI preset 이 아무것도 고정하지 않았다. 러너에 VS 2026 이 없을 것으로 봤기 때문이다.
+2026-08-30 첫 실행 로그가 그 전제를 뒤집었다 — `windows-2025` 러너는
+**Visual Studio Enterprise 2026 (18.9.12112.369) / MSVC 14.51.36231** 이었고,
+toolset 이 로컬과 같은 값이다. 그래서 고정을 포기할 이유가 없어졌다.
+
+🔴 러너 이미지가 바뀌어 VS 2026 이나 SDK 10.0.26100.0 이 사라지면 CI 는 **configure 단계에서
+즉시 실패한다.** 그것이 의도다 — 조용히 다른 것으로 빌드되는 것보다 낫다.
+그때 볼 곳은 워크플로의 "툴체인 기록" 단계 로그다 (VS·toolset·설치된 Windows SDK 목록).
+
+### Windows SDK 를 `architecture` 에 넣은 이유
+
+처음에는 `CMAKE_SYSTEM_VERSION` 캐시 변수로 고정했다. **그건 고정이 아니었다.**
+
+CMake 3.27 의 `CMP0149` 는 Visual Studio 제너레이터의 SDK 선택 방식을 바꿨다. 새 동작에서
+`CMAKE_SYSTEM_VERSION` 은 "목표 Windows 버전"일 뿐이고 SDK 는 **설치된 것 중 최신**이 선택된다.
+`CMakeLists.txt` 의 `cmake_minimum_required(VERSION 3.28)` 이 이 정책을 새 동작으로 올린다.
+
+실측(2026-08-31, 빈 프로젝트로 격리):
+
+| 준 값 | 결과 |
+|---|---|
+| `-DCMAKE_SYSTEM_VERSION=10.0.99999.0` | `Selecting Windows SDK version 10.0.26100.0` · **exit 0** |
+| `-A "x64,version=10.0.99999.0"` | `CMake Error` · **exit 1** |
+| `-A "x64,version=10.0.26100.0"` | 해당 SDK 선택 · exit 0 |
+
+그래서 SDK 는 `CMAKE_GENERATOR_PLATFORM`(preset 의 `architecture`)의 `version=` 필드로 고정한다.
+`CMAKE_SYSTEM_VERSION` 은 아무것도 보장하지 않으면서 고정된 것처럼 보이므로 지웠다.
+
+### toolset 은 `14.51` 계열까지만 강제된다
+
+`version=14.51` 은 14.51.x 중 설치된 것을 고른다. **patch 까지 적어도 강제되지 않는다** —
+실측: `-T v145,version=14.51.99999` 로 configure·빌드 모두 exit 0 (존재하지 않는 patch 인데
+조용히 설치된 것으로 빌드됐다). 그래서 "로컬과 CI 가 같은 컴파일러 patch 를 쓴다"는 보장은
+기계에 없다. 지금 기계가 보장하는 것은 **같은 14.51 계열**까지다.
+
+patch 까지 맞았는지는 CI 로그의 configure 출력에서 확인한다 —
+`Check for working CXX compiler: ...\MSVC\14.51.36231\bin\Hostx64\x64\cl.exe`.
 
 ### `$env{VCPKG_ROOT}`
 
@@ -81,7 +118,8 @@ DLL 을 복사할 필요가 없어 테스트와 CI 가 단순해진다.
 
 - VS 를 새 버전으로 올림 → `generator` 와 `toolset` 을 함께 바꾸고,
   `scripts/phase1.ps1` 의 `$RequiredToolset` 도 같이 바꾼다
-- Windows SDK 변경 → `CMAKE_SYSTEM_VERSION` 과 `$RequiredSdk`
+- Windows SDK 변경 → `architecture` 의 `version=` 과 `phase1.ps1` 의 `$RequiredSdk`
+  (🔴 `CMAKE_SYSTEM_VERSION` 으로 되돌리지 마라 — 위 "Windows SDK 를 `architecture` 에 넣은 이유")
 
 ## `CMakeLists.txt` — 무엇을 빌드하는가
 

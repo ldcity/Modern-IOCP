@@ -12,7 +12,7 @@
       "description": "S1 의 정본 preset. build / verify-dump / CI / VS 열기 전부 이것을 쓴다.",
       "generator": "Visual Studio 18 2026",
       "architecture": {
-        "value": "x64",
+        "value": "x64,version=10.0.26100.0",
         "strategy": "set"
       },
       "toolset": {
@@ -21,7 +21,6 @@
       },
       "binaryDir": "${sourceDir}/build/x64-release",
       "cacheVariables": {
-        "CMAKE_SYSTEM_VERSION": "10.0.26100.0",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
       }
@@ -29,16 +28,9 @@
     {
       "name": "x64-release-ci",
       "displayName": "x64 Release (CI)",
-      "description": "GitHub Actions 러너용. 설치된 VS 를 그대로 쓴다 - 제너레이터·toolset·SDK 를 고정하지 않는다.",
-      "architecture": {
-        "value": "x64",
-        "strategy": "set"
-      },
-      "binaryDir": "${sourceDir}/build/x64-release-ci",
-      "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
-      }
+      "description": "GitHub Actions 러너용. 툴체인은 x64-release 를 상속해 로컬과 같게 두고 build 디렉터리만 분리한다.",
+      "inherits": "x64-release",
+      "binaryDir": "${sourceDir}/build/x64-release-ci"
     }
   ],
   "buildPresets": [
