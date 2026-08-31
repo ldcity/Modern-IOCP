@@ -5,8 +5,9 @@
 | Task | Status | Implementer | Reviewer | Owned paths |
 |---|---|---|---|---|
 | [TASK-20260829-modern-iocp-phase1](TASK-20260829-modern-iocp-phase1.md) | **Phase 정의** (실행 task 아님) | — | Codex | `.ai/tasks/TASK-20260829-modern-iocp-phase1.md` |
+| [TASK-20260831-modern-iocp-s2-session-lifetime](TASK-20260831-modern-iocp-s2-session-lifetime.md) | **Approved** — 구현 착수 가능 (Codex 리뷰 1회차 반영) | 사용자(코드) + Claude(인프라) | Codex | `modern-iocp/**`, `.ai/tasks/TASK-20260831-modern-iocp-s2-session-lifetime.md` |
 
-활성 실행 task 없음 — 다음은 S2(세션 수명)다.
+활성 실행 task 1개(S2). Phase 게이트 준수 — S3 이후 task 를 미리 열지 않는다.
 
 ## Rules
 
